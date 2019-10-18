@@ -52,36 +52,48 @@ if (process.platform === 'darwin') {
 // for the app to show a window than to have to click "About" to see
 // that updates are working.
 //-------------------------------------------------------------------
-let mainWindow;
+let win;
 
 function sendStatusToWindow(text) {
   log.info(text);
-  mainWindow.webContents.send('message', text);
+  win.webContents.send('message', text);
 }
 function createDefaultWindow() {
-  mainWindow = new BrowserWindow({
-      //解决electron5.x 及以上版本中默认没法在electron渲染进程引入nodejs模块
-      webPreferences: {
-          nodeIntegration: true
-      }
+  win = new BrowserWindow();
+  win.webContents.openDevTools();
+  win.on('closed', () => {
+    win = null;
   });
-  mainWindow.webContents.openDevTools();
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-  mainWindow.loadURL(`file://${__dirname}/version.html#v${app.getVersion()}`);
-  return mainWindow;
+  win.loadURL(`file://${__dirname}/version.html#v${app.getVersion()}`);
+  return win;
 }
-
+autoUpdater.on('checking-for-update', () => {
+  sendStatusToWindow('Checking for update...');
+})
+autoUpdater.on('update-available', (info) => {
+  sendStatusToWindow('Update available.');
+})
+autoUpdater.on('update-not-available', (info) => {
+  sendStatusToWindow('Update not available.');
+})
+autoUpdater.on('error', (err) => {
+  sendStatusToWindow('Error in auto-updater. ' + err);
+})
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  sendStatusToWindow(log_message);
+})
+autoUpdater.on('update-downloaded', (info) => {
+  sendStatusToWindow('Update downloaded');
+});
 app.on('ready', function() {
   // Create the Menu
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 
   createDefaultWindow();
-  //尝试更新
-  updateHandle();
-
 });
 app.on('window-all-closed', () => {
   app.quit();
@@ -128,76 +140,3 @@ app.on('ready', function()  {
 // autoUpdater.on('update-downloaded', (info) => {
 //   autoUpdater.quitAndInstall();  
 // })
-
-
-
-
-//检测更新
-let uploadUrl = "http://192.168.1.29:8080/download/history2/";
-function updateHandle()
-{
-  let message = {
-    error: '检查更新出错',
-    checking: '正在检查更新……',
-    updateAva: '检测到新版本，正在下载……',
-    updateNotAva: '现在使用的就是最新版本，不用更新',
-  };
-  const os = require('os');
-
-  //避免自动下载强制更新
-  autoUpdater.autoDownload = false;
-  autoUpdater.setFeedURL(uploadUrl);
-  autoUpdater.on('error', function (error) {
-    sendUpdateMessage(message.error)
-  });
-  autoUpdater.on('checking-for-update', function () {
-    console.log("checking-for-update");
-    sendUpdateMessage(message.checking)
-  });
-  autoUpdater.on('update-available', function (info) {
-    console.log("update-available");
-    sendUpdateMessage(message.updateAva)
-    //检测到新版本后监听渲染进程传来是否开始下载消息
-    ipcMain.on("startDownload", ()=>{
-        //手动下载更新
-        autoUpdater.downloadUpdate().then(res => {
-            sendUpdateMessage("下载完成");
-        });
-    })
-
-    mainWindow.webContents.send("startDownload", info);
-  });
-  autoUpdater.on('update-not-available', function (info) {
-    console.log("update-not-available");
-    sendUpdateMessage(message.updateNotAva)
-  });
-
-  // 更新下载进度事件
-  autoUpdater.on('download-progress', function (progressObj) {
-    console.log("download-progress");
-    mainWindow.webContents.send('downloadProgress', progressObj)
-  })
-  autoUpdater.on('update-downloaded', function (event, releaseNotes, releaseName, releaseDate, updateUrl, quitAndUpdate) {
-
-    ipcMain.on('isUpdateNow', (e, arg) =>{
-      console.log(arguments);
-      console.log("开始更新isUpdateNow");
-      //some code here to handle event
-      autoUpdater.quitAndInstall();
-    });
-    console.log("update-downloaded");
-    mainWindow.webContents.send('isUpdateNow')
-
-  });
-
-  ipcMain.on("checkForUpdate",()=>{
-    console.log("checkForUpdate");
-    //执行自动更新检查
-    autoUpdater.checkForUpdates();
-  })
-}
-
-// 通过main进程发送事件给renderer进程，提示更新信息
-function sendUpdateMessage(text) {
-  mainWindow.webContents.send('message', text)
-}

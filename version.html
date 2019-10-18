@@ -4,6 +4,7 @@
   <title>Electron Updater Example</title>
 </head>
 <body>
+  <p>测试更新版本11111111</p>
   Current version: <span id="version">vX.Y.Z</span>
   <div id="messages"></div>
 <script>
@@ -13,12 +14,83 @@ document.getElementById('version').innerText = version;
 
 // Listen for messages
 const {ipcRenderer} = require('electron');
-ipcRenderer.on('message', function(event, text) {
+const  {dialog } = require("electron").remote;
+console.log(dialog);
+ipcRenderer.send("checkForUpdate");
+ipcRenderer.on("message", (event, text) =>{
+  console.log(text);
+  //this.$message(text);
+  //this.tips = text;
+  let container = document.getElementById('messages');
+  let message = document.createElement('div');
+  message.innerHTML = text;
+  container.appendChild(message);
+});
+//注意："downloadProgress"事件可能存在无法触发的问题，只需要限制一下下载网速就好了
+ipcRenderer.on("downloadProgress", (event, progressObj)=>{
+  console.log(progressObj);
+  this.downloadPercent = progressObj.percent || 0;
+    console.log(this.downloadPercent);
+});
+
+ipcRenderer.on("startDownload",(event, info)=>{
+    console.log("startDownload");
+    console.log(info);
+    alert("startDownload")  //在具体项目中使用对话框决定是否下载
+    ipcRenderer.send("startDownload");
+    /*const options = {
+        type: "info",
+        title: "软件更新",
+        message: "是否下载更新",
+        buttons:["确定", "取消"]
+    };
+    let index = dialog.showMessageBoxSync(options);
+    if (index === 0)
+    {
+        console.log("开始下载");
+        ipcRenderer.send("startDownload");
+    }else{
+        console.log("已经取消下载");
+    }*/
+/*    this.$confirm(`检测到新版本${info.version}，是否下载更新？`, "提示", {
+        confirmButtonText:"是",
+        cancelButtonText: "否",
+        type: "info"
+    }).then(()=>{
+
+        ipcRenderer.send("startDownload");
+
+    }).catch(()=>{
+        console.log("已经取消更新");
+    })*/
+});
+
+
+ipcRenderer.on("isUpdateNow", () =>{
+  console.log("isUpdateNow");
+   alert("isUpdateNow");
+  ipcRenderer.send("isUpdateNow");
+/*    const options = {
+    type: "info",
+    title: "软件更新",
+    message: "是否现在更新",
+    buttons:["确定", "取消"]
+  };
+  let index = dialog.showMessageBoxSync(options);
+  console.log("index: " +index);
+  if (index === 0) {
+    console.log("开始更新");
+    //some code here to handle event
+    ipcRenderer.send("isUpdateNow");
+  }*/
+});
+
+/*ipcRenderer.on('message', function(event, text) {
   var container = document.getElementById('messages');
   var message = document.createElement('div');
   message.innerHTML = text;
   container.appendChild(message);
-})
+})*/
 </script>
 </body>
 </html>
