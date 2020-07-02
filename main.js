@@ -126,7 +126,7 @@ app.on('ready', function()  {
 // autoUpdater.on('download-progress', (progressObj) => {
 // })
 // autoUpdater.on('update-downloaded', (info) => {
-//   autoUpdater.quitAndInstall();  
+//   autoUpdater.quitAndInstall();
 // })
 
 
@@ -142,7 +142,6 @@ function updateHandle()
     updateAva: '检测到新版本，正在下载……',
     updateNotAva: '现在使用的就是最新版本，不用更新',
   };
-  const os = require('os');
 
   //避免自动下载强制更新
   autoUpdater.autoDownload = false;
